@@ -2,10 +2,10 @@
 #include <fstream>
 #include <vector>
 #include <cstdio>
-#include <io.h>
 #ifdef WIN32
 #include <windows.h>
 #include <tchar.h>
+#include <io.h>
 #endif
 #ifdef __linux__
 #include <iostream>
@@ -18,7 +18,9 @@
 #endif
 void replace(const char* filePath);
 void traverse(std::vector<std::string> &vct, char* path);
+#ifdef WIN32
 BOOL GetPrivileges();
+#endif
 int endWith(std::string s,std::string sub){
     return s.rfind(sub)==(s.length()-sub.length())?1:0;
 }
