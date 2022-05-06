@@ -3,20 +3,6 @@ on:
   push:
     branches: [ master ]
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: lukka/get-cmake@v3.22.2
-      - uses: actions/checkout@v2
-      - name: Build
-        run: |
-          mkdir build
-          cd build
-          cmake ..
-          make
-      - uses: actions/upload-artifact@v2
-        with:
-          path: ${{ github.workspace }}/build/N0vaResourceExtractor_linux
   build-windows:
     runs-on: windows-latest
     steps:
@@ -33,4 +19,4 @@ jobs:
           mingw32-make
       - uses: actions/upload-artifact@v2
         with:
-          path: ${{ github.workspace }}/build/N0vaResourceExtractor_windows.exe
+          path: ${{ github.workspace }}/build

@@ -8,14 +8,6 @@
 + Linux：输入 `./N0vaResourceExtractor [需要替换的文件]`
 + Windows: 直接把ndf文件拖到二进制文件里即可
 ## 从源代码构建
-### Linux(安装cmake和gcc环境)
-```
-mkdir build
-cd build
-cmake ..
-make
-```
-在`build`目录下寻找产出的二进制文件
 ### Windows(安装cmake和MinGW-W64)
 ```
 mkdir build

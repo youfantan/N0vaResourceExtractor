@@ -1,0 +1,5 @@
+#define EXIF_FILE 0x00
+#define JPEG_FILE 0x01
+#define PNG_FILE 0x02
+#define FTYP_VIDEO_FILE 0x03
+#define UNRECOGNIZED_FILE 0x7f
