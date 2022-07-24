@@ -7,6 +7,7 @@
 #define BTN_3 3304
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #pragma comment(lib,"ComCtl32.lib")
+#pragma comment(lib,"dwmapi.lib")
 #include <windows.h>
 #include <tchar.h>
 #include <string>
@@ -15,6 +16,21 @@
 #include <corecrt_io.h>
 #include <Shlobj.h>
 #include <direct.h>
+#include <dwmapi.h>
+struct ACCENTPOLICY
+{
+    int na;
+    int nf;
+    int nc;
+    int nA;
+};
+struct WINCOMPATTRDATA
+{
+    int na;
+    PVOID pd;
+    ULONG ul;
+};
+typedef BOOL(WINAPI* SetWindowCompositionAttributeFunc)(IN HWND hwnd, IN WINCOMPATTRDATA* pwcad);
 HWND Parent;
 HWND ProgressBar;
 std::string currentDir;
@@ -45,19 +61,24 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     wc.lpszClassName = CLASS_NAME;
     RegisterClass(&wc);
     HWND hwnd = CreateWindowEx(
-            0,
+            WS_EX_OVERLAPPEDWINDOW|WS_EX_LAYERED,
             CLASS_NAME,
-            L"N0vaDesktopResourceExtractor",
-            WS_OVERLAPPEDWINDOW,
+            L"",
+            WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_MINIMIZEBOX,
             CW_USEDEFAULT, CW_USEDEFAULT, 500, 250,
             nullptr,
             nullptr,
             hInstance,
             nullptr
     );
+    SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) &~WS_CAPTION);
+    SetLayeredWindowAttributes(hwnd, RGB(255,255,255),0,LWA_COLORKEY);
+    HMODULE user32 = LoadLibrary(L"user32.dll");
+    SetWindowCompositionAttributeFunc SetWindowCompositionAttribute = (SetWindowCompositionAttributeFunc)GetProcAddress(user32, "SetWindowCompositionAttribute");
+    ACCENTPOLICY policy = { 3, 0, 0, 0 }; // and even works 4,0,155,0 (Acrylic blur)
+    WINCOMPATTRDATA data = { 19, &policy,sizeof(ACCENTPOLICY) };
+    SetWindowCompositionAttribute(hwnd, &data);
     Parent = hwnd;
-
-
     if (hwnd == nullptr)
     {
         return 0;
@@ -71,7 +92,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     }
     return 0;
 }
-
+void EraseAndDraw(RECT* rect, std::wstring text) {
+    HDC hdc;
+    hdc = GetWindowDC(Parent);
+    HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
+    FillRect(hdc, rect, white);
+    DrawText(hdc,text.c_str(),text.size(),rect, DT_VCENTER);
+    ReleaseDC(Parent, hdc);
+}
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
@@ -81,6 +109,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return 0;
         case WM_CREATE:
         {
+            //Draw Components
             InitCommonControls();
             LOGFONT logFont;
             logFont.lfHeight = 24;
@@ -117,11 +146,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         
         case WM_PAINT:
         {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hwnd, &ps);
-            FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
-            EndPaint(hwnd, &ps);
-            return 0;
+            HDC hdc;
+            hdc = GetDC(hwnd);
+            HBRUSH hb;
+            RECT rect;
+            GetClientRect(hwnd, &rect);
+            hb = CreateSolidBrush(RGB(255, 255, 255));
+            FillRect(hdc, &rect, hb);
+            DeleteDC(hdc);
+            DeleteObject(hb);
+            UpdateWindow(hwnd);
+            return DefWindowProc(hwnd, uMsg, wParam, lParam);
         }
         case WM_COMMAND:
         {
@@ -217,6 +252,7 @@ void doConvert(wchar_t* wFilePath) {
     int fType = getFileType(filePath.c_str());
     replace(filePath, fType);
     SendMessage(ProgressBar, PBM_SETPOS, (WPARAM)(100), (LPARAM)0);
+    MessageBox(nullptr, L"文件已成功转换", L"完成", MB_OK);
 }
 DWORD WINAPI doVolumeConvert(LPVOID wDirPath) {
     SendMessage(ProgressBar, PBM_SETRANGE,(WPARAM)0, (LPARAM)(MAKELPARAM(0, 100)));
@@ -234,6 +270,7 @@ DWORD WINAPI doVolumeConvert(LPVOID wDirPath) {
         int fType = getFileType(vct[i].c_str());
         replace(vct[i], fType);
     }
+    MessageBox(nullptr, L"所有文件已成功转换", L"完成", MB_OK);
     return 0;
 }
 boolean compareFromHead(unsigned char* toBeCompared, size_t nToBeCompared, const unsigned char* pattern, size_t nPattern) {
