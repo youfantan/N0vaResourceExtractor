@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./github-markdown-dark.css">
+    <style>
+        body{
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            top: 5%;
+        }
+    </style>
+    <title>N0vaResourceExtractor帮助</title>
+</head>
+<body class="markdown-body">
+<h1>N0vaResourceExtractor帮助</h1>
+
+<h3>这东西干嘛用的</h3>
+
+<p>人工桌面的内容都是<strong>预渲染视频与图片</strong>，因此我们提供了一个刻意把人工桌面的内容转换为其原本格式的工具。</p>
+
+<h3>怎么用</h3>
+
+<p>确保已在<a href="https://n0va.mihoyo.com/#/">人工桌面官方网站</a>下载并安装完成软件本体，然后打开人工桌面，转到左下角的设置，找到<strong>资源存储</strong>这个输入框，复制路径，例如我的路径是<code>D:/N0vaDesktop/N0vaDesktopCache/N0vaDesktopCache</code>，并在后面加入<code>/game</code>。</p>
+
+<p>双击打开<code>N0vaResourceExtractor.exe</code>，你可以选择提取单个文件或提取目录（我建议提取目录，因为你没法从文件名里猜出来里面装的是什么）。</p>
+
+<p>提取单个文件：</p>
+
+<p>点击<strong>选择单个文件转换</strong>，然后会打开一个文件选择框，找到你刚刚复制的路径，接着选择你需要转换的文件（我就随便选一个了）。选择好后，点击开始。等待进度条走完，进入程序所在的目录，再进入<code>out</code>文件夹，可以看到一个与刚刚选择的文件同名的文件，即转换完成的文件。</p>
+
+<p>提取目录：</p>
+
+<p>点击<strong>选择目录批量转换</strong>，然后会打开一个目录选择框，如上所述找到<code>game</code>目录，完成后的文件也会输出到<code>out</code>目录中。</p>
+
+<h3>常见错误</h3>
+
+<blockquote>
+  <p>由于找不到VCRUNTIMExxx.dll/MSVCPxxx.dll，无法继续执行代码。重新安装程序可能会解决此问题。</p>
+</blockquote>
+
+<p>下载<a href="https://aka.ms/vs/17/release/vc_redist.x64.exe">此文件</a>后按照指示安装并重启，再运行此程序即可。</p>
+
+<p>若按照上述措施仍未能解决问题，请发邮件至shandiankulishe@gmail.com或shandiankulishe@163.com，也可在<a href="https://github.com/youfantan/N0vaResourceExtractor">本程序仓库</a>提出Issues，作者看到后会及时回复。</p>
+
+<h2>附录Ⅰ：从源代码构建本程序</h2>
+
+<p>使用git clone<a href="https://github.com/youfantan/N0vaResourceExtractor">本仓库</a>。</p>
+
+<p>安装Microsoft Visual Studio 2019并安装<code>使用C++的桌面开发</code>工作负荷。</p>
+
+<p>用上述程序打开仓库，等待VS索引完成后点击<code>生成解决方案</code>，在<code>x64/Debug</code>或<code>x64/Release</code>中找到生成的<code>UIApp.exe</code>或<code>CLIApp</code>。</p>
+
+<h2>附录Ⅱ：获取适用于MacOS/Linux的相似工具</h2>
+
+<p>请参见本仓库<code>#2</code>与<code>#3</code>两个issues。</p>
+</body>
+</html>

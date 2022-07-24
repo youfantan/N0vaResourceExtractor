@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <tchar.h>
 #include <io.h>
+#include <direct.h>
 #include <conio.h>
 #include "def.h"
 void replace(std::string filePath,int fileType);
@@ -25,7 +26,7 @@ int main(int argc,char **argv) {
         replace(filePath, getFileType(filePath.c_str()));
     } else{
         char filePath[1024];
-        getcwd(filePath,1024);
+        _getcwd(filePath,1024);
         std::vector<std::string> dirs;
         traverse(dirs,filePath);
         for (auto it = dirs.begin(); it!=dirs.end() ; ++it) {
@@ -35,7 +36,7 @@ int main(int argc,char **argv) {
         }
     }
     printf("Press any key to continue");
-    getch();
+    _getch();
     return 0;
 }
 boolean compareFromHead(unsigned char* toBeCompared,size_t nToBeCompared,const unsigned char* pattern,size_t nPattern){
@@ -126,12 +127,12 @@ void replace(std::string filePath,int fileType){
     fclose(modified);
 }
 void traverse(std::vector<std::string> &vct, char* path){
-    long handle;
+    _int64 handle;
     _finddata_t fi{};
     char _path[1024]={0};
     memcpy(_path,path, strlen(path));
     strcat(_path,"\\*");
-    int ret=handle=_findfirst(_path,&fi);
+    _int64 ret=handle=_findfirst(_path,&fi);
     if (handle==-1) {
         MessageBox(nullptr, _T("No files exists in the directory"), _T("Error"), MB_OK);
         printf("Error: No files exists in the directory %s", path);
