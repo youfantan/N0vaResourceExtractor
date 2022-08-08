@@ -5,8 +5,11 @@
 #define BTN_1 3302
 #define BTN_2 3303
 #define BTN_3 3304
+#define BTN_4 3305
+#define BTN_5 3306
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #pragma comment(lib,"ComCtl32.lib")
+#pragma comment (lib,"Gdiplus.lib") 
 #pragma comment(lib,"dwmapi.lib")
 #include <windows.h>
 #include <tchar.h>
@@ -17,6 +20,9 @@
 #include <Shlobj.h>
 #include <direct.h>
 #include <dwmapi.h>
+#include <gdiplus.h>
+using namespace Gdiplus;
+
 struct ACCENTPOLICY
 {
     int na;
@@ -34,6 +40,7 @@ typedef BOOL(WINAPI* SetWindowCompositionAttributeFunc)(IN HWND hwnd, IN WINCOMP
 HWND Parent;
 HWND ProgressBar;
 std::string currentDir;
+ULONG_PTR m_gdiplusToken;
 int mode = -1;
 wchar_t* param = new wchar_t[MAX_PATH];
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -46,6 +53,11 @@ void doConvert(wchar_t* wFilePath);
 DWORD WINAPI doVolumeConvert(LPVOID wDirPath);
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
+    SetProcessDPIAware();
+#ifdef _DEBUG
+    AllocConsole();
+    freopen("CONOUT$", "w", stdout);
+#endif
     char cwd[MAX_PATH] = { 0 };
     _getcwd(cwd, MAX_PATH);
     currentDir = cwd;
@@ -61,21 +73,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     wc.lpszClassName = CLASS_NAME;
     RegisterClass(&wc);
     HWND hwnd = CreateWindowEx(
-            WS_EX_OVERLAPPEDWINDOW|WS_EX_LAYERED,
+            WS_EX_LAYERED,
             CLASS_NAME,
             L"",
-            WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_MINIMIZEBOX,
-            CW_USEDEFAULT, CW_USEDEFAULT, 500, 250,
+            WS_POPUP,
+            CW_USEDEFAULT, CW_USEDEFAULT, 460, 250,
             nullptr,
             nullptr,
             hInstance,
             nullptr
     );
     SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) &~WS_CAPTION);
-    SetLayeredWindowAttributes(hwnd, RGB(255,255,255),0,LWA_COLORKEY);
+    SetLayeredWindowAttributes(hwnd, RGB(255,255,254),0,LWA_COLORKEY);
     HMODULE user32 = LoadLibrary(L"user32.dll");
     SetWindowCompositionAttributeFunc SetWindowCompositionAttribute = (SetWindowCompositionAttributeFunc)GetProcAddress(user32, "SetWindowCompositionAttribute");
-    ACCENTPOLICY policy = { 3, 0, 0, 0 }; // and even works 4,0,155,0 (Acrylic blur)
+    ACCENTPOLICY policy = { 3, 0, 0, 0 };
     WINCOMPATTRDATA data = { 19, &policy,sizeof(ACCENTPOLICY) };
     SetWindowCompositionAttribute(hwnd, &data);
     Parent = hwnd;
@@ -84,6 +96,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         return 0;
     }
     ShowWindow(hwnd, nCmdShow);
+    Gdiplus::GdiplusStartupInput StartupInput;
+    GdiplusStartup(&m_gdiplusToken, &StartupInput, nullptr);
     MSG msg = { };
     while (GetMessage(&msg, nullptr, 0, 0) > 0)
     {
@@ -92,28 +106,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     }
     return 0;
 }
-void EraseAndDraw(RECT* rect, std::wstring text) {
-    HDC hdc;
-    hdc = GetWindowDC(Parent);
-    HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
-    FillRect(hdc, rect, white);
-    DrawText(hdc,text.c_str(),text.size(),rect, DT_VCENTER);
-    ReleaseDC(Parent, hdc);
-}
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            return 0;
         case WM_CREATE:
         {
             //Draw Components
             InitCommonControls();
             LOGFONT logFont;
             logFont.lfHeight = 24;
-            logFont.lfWeight = FW_MEDIUM;
+            logFont.lfWidth = 0;
+            logFont.lfWeight = FW_REGULAR;
             logFont.lfOrientation = 0;
             logFont.lfEscapement = 0;
             logFont.lfStrikeOut = 0;
@@ -124,19 +128,23 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             logFont.lfClipPrecision = CLIP_DEFAULT_PRECIS;
             logFont.lfQuality = DEFAULT_QUALITY;
             logFont.lfPitchAndFamily = DEFAULT_PITCH | FF_ROMAN;
-            wcscpy(logFont.lfFaceName, _T("微软雅黑"));
+            wcscpy(logFont.lfFaceName, L"Microsoft JhengHei");
             HFONT hFont;
             hFont = CreateFontIndirect(&logFont);
+            HWND btn_exit = CreateWindow(L"Button", L"", WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
+                10, 7, 13, 13, hwnd, (HMENU)BTN_4, (HINSTANCE)hwnd, nullptr);
+            HWND btn_min_size = CreateWindow(L"Button", L"", WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
+                30, 7, 13, 13, hwnd, (HMENU)BTN_5, (HINSTANCE)hwnd, nullptr);
             HWND btn0=CreateWindow(L"Button", L"选择单个文件转换", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                20, 10, 200, 60, hwnd, (HMENU)BTN_0, (HINSTANCE)hwnd, nullptr);
+                20, 40, 200, 60, hwnd, (HMENU)BTN_0, (HINSTANCE)hwnd, nullptr);
             HWND btn1=CreateWindow(L"Button", L"选择目录批量转换", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                240, 10, 200, 60, hwnd, (HMENU)BTN_1, (HINSTANCE)hwnd, nullptr);
-            HWND progress = CreateWindowEx(0, PROGRESS_CLASS, (LPTSTR)NULL, WS_CHILD | WS_VISIBLE, 20, 100, 420, 30, hwnd, nullptr, nullptr, nullptr);
+                240, 40, 200, 60, hwnd, (HMENU)BTN_1, (HINSTANCE)hwnd, nullptr);
+            HWND progress = CreateWindowEx(0, PROGRESS_CLASS, (LPTSTR)NULL, WS_CHILD | WS_VISIBLE, 20, 130, 420, 30, hwnd, nullptr, nullptr, nullptr);
             ProgressBar = progress;
             HWND help = CreateWindow(L"Button", L"帮助", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                20, 150, 100, 30, hwnd, (HMENU)BTN_2, (HINSTANCE)hwnd, nullptr);
+                20, 180, 100, 30, hwnd, (HMENU)BTN_2, (HINSTANCE)hwnd, nullptr);
             HWND start = CreateWindow(L"Button", L"开始", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                340, 150, 100, 30, hwnd, (HMENU)BTN_3, (HINSTANCE)hwnd, nullptr);
+                340, 180, 100, 30, hwnd, (HMENU)BTN_3, (HINSTANCE)hwnd, nullptr);
             SendMessage(btn0, WM_SETFONT, (WPARAM)hFont, (LPARAM)TRUE);
             SendMessage(btn1, WM_SETFONT, (WPARAM)hFont, (LPARAM)TRUE);
             SendMessage(help, WM_SETFONT, (WPARAM)hFont, (LPARAM)TRUE);
@@ -146,15 +154,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         
         case WM_PAINT:
         {
-            HDC hdc;
-            hdc = GetDC(hwnd);
-            HBRUSH hb;
+            HDC hdc = GetDC(hwnd);
+            Graphics graphics(hdc);
             RECT rect;
             GetClientRect(hwnd, &rect);
-            hb = CreateSolidBrush(RGB(255, 255, 255));
-            FillRect(hdc, &rect, hb);
+            Gdiplus::SolidBrush bkBrush(Gdiplus::Color(255, 255, 255, 254));
+            Gdiplus::Pen* jadePen = new Pen(Gdiplus::Color(255,231,118,127));
+            Gdiplus::SolidBrush jadeBrush(Gdiplus::Color(255,231,118,127));
+            Gdiplus::RectF bRect(rect.left, rect.top, rect.right-1, rect.bottom-1);
+            Gdiplus::RectF capRect(0, 0, 459, 30);
+            graphics.FillRectangle(&bkBrush, bRect);
+            graphics.DrawRectangle(jadePen, bRect);
+            graphics.FillRectangle(&jadeBrush,capRect);
             DeleteDC(hdc);
-            DeleteObject(hb);
             UpdateWindow(hwnd);
             return DefWindowProc(hwnd, uMsg, wParam, lParam);
         }
@@ -224,8 +236,62 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     {
                         MessageBox(Parent, L"请选择一个文件或目录", L"Error", MB_ICONERROR);
                     }
-           
+                    break;
                 }
+                case BTN_4: 
+                {
+                    Gdiplus::GdiplusShutdown(m_gdiplusToken);
+                    PostQuitMessage(0);
+                    break;
+                }
+                case BTN_5:
+                {
+                    PostMessage(hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+                    break;
+                }
+            }
+            return 0;
+        }
+        case WM_DRAWITEM:
+        {
+            LPDRAWITEMSTRUCT pdis = (LPDRAWITEMSTRUCT)lParam;
+            int cx = pdis->rcItem.right - pdis->rcItem.bottom;
+            int cy = pdis->rcItem.bottom - pdis->rcItem.top;
+
+            switch (pdis->CtlID)
+            {
+                case BTN_4:
+                {
+                    HDC hdc = pdis->hDC;
+                    Graphics graphics(hdc);
+                    graphics.SetSmoothingMode(SmoothingModeHighQuality);
+                    Gdiplus::RectF rect(pdis->rcItem.left, pdis->rcItem.top, pdis->rcItem.right, pdis->rcItem.bottom);
+                    Gdiplus::SolidBrush brush(Gdiplus::Color(255, 255, 0, 0));
+                    graphics.FillEllipse(&brush, rect);
+                    ReleaseDC(hwnd, hdc);
+                    break;
+                }
+                case BTN_5:
+                {
+                    HDC hdc = pdis->hDC;
+                    Graphics graphics(hdc);
+                    graphics.SetSmoothingMode(SmoothingModeHighQuality);
+                    Gdiplus::RectF rect(pdis->rcItem.left, pdis->rcItem.top, pdis->rcItem.right, pdis->rcItem.bottom);
+                 Gdiplus::SolidBrush brush(Gdiplus::Color(255, 0, 255, 0));
+                 graphics.FillEllipse(&brush, rect);
+                 ReleaseDC(hwnd, hdc);
+                    break;
+                }
+                return 0;
+            }
+        }
+        case WM_MOUSEMOVE:
+        {
+            int x = LOWORD(lParam);
+            int y = HIWORD(lParam);
+            if (x < 459 && y < 30)
+            {
+                SendMessage(hwnd, WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
             }
         }
         return 0;
@@ -268,6 +334,7 @@ DWORD WINAPI doVolumeConvert(LPVOID wDirPath) {
         Prog = (int)(xProg * 100);
         SendMessage(ProgressBar, PBM_SETPOS, (WPARAM)(Prog), (LPARAM)0);
         int fType = getFileType(vct[i].c_str());
+        printf("%s \n", vct[i].c_str());
         replace(vct[i], fType);
     }
     MessageBox(nullptr, L"所有文件已成功转换", L"完成", MB_OK);
